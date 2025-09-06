@@ -1,48 +1,46 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import express from 'express'
-import { createServer } from 'http'
-import { setupRoutes } from '../src/routes.js'
-import { sources, fetchGymInfo } from '../src/sources.js'
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import express from "express";
+import { createServer } from "http";
+import { setupRoutes } from "../src/routes.js";
+import { sources, fetchGymInfo } from "../src/sources.js";
 
 // Mock the sources module
-vi.mock('../src/sources.js', () => ({
-  sources: [
-    { name: 'Test Source', url: 'https://test.com', parse: vi.fn() }
-  ],
-  fetchGymInfo: vi.fn()
-}))
+vi.mock("../src/sources.js", () => ({
+  sources: [{ name: "Test Source", url: "https://test.com", parse: vi.fn() }],
+  fetchGymInfo: vi.fn(),
+}));
 
-describe('Server Integration', () => {
-  let app: express.Application
-  let server: any
+describe("Server Integration", () => {
+  let app: express.Application;
+  let server: any;
 
   beforeEach(() => {
-    app = express()
-    app.use(express.json())
-    setupRoutes(app)
-    vi.clearAllMocks()
-  })
+    app = express();
+    app.use(express.json());
+    setupRoutes(app);
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
     if (server) {
-      server.close()
+      server.close();
     }
-  })
+  });
 
-  it('should start server successfully', () => {
+  it("should start server successfully", () => {
     expect(() => {
-      server = createServer(app)
-    }).not.toThrow()
-  })
+      server = createServer(app);
+    }).not.toThrow();
+  });
 
-  it('should handle CORS properly', async () => {
+  it("should handle CORS properly", async () => {
     // This would require additional setup with cors middleware testing
     // For now, we'll just verify the app can be created
-    expect(app).toBeDefined()
-  })
+    expect(app).toBeDefined();
+  });
 
-  it('should have JSON middleware', () => {
+  it("should have JSON middleware", () => {
     // Verify express.json() middleware is applied
-    expect(app).toBeDefined()
-  })
-})
+    expect(app).toBeDefined();
+  });
+});

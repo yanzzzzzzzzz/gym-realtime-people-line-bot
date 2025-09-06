@@ -35,6 +35,7 @@ The tests cover:
 ## Mocking
 
 Tests use Vitest's mocking capabilities to:
+
 - Mock `fetch` API calls
 - Mock external data sources
 - Test error scenarios
@@ -43,6 +44,7 @@ Tests use Vitest's mocking capabilities to:
 ## Test Results
 
 All 21 tests are currently passing:
+
 - Types: 4 tests
 - Sources: 9 tests
 - Server: 3 tests

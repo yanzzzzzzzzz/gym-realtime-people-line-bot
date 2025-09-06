@@ -5,11 +5,18 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "nodemon --exec \"node --loader ts-node/esm src/server.ts\""
+    "dev": "nodemon --exec \"node --loader ts-node/esm src/server.ts\"",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "typescript": "^5.0.0"
+    "@types/supertest": "^6.0.3",
+    "@vitest/ui": "^3.2.4",
+    "supertest": "^7.1.4",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@types/express": "^5.0.3",
