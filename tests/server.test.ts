@@ -4,11 +4,25 @@ import { createServer } from "http";
 import { setupRoutes } from "../src/routes.js";
 import { sources, fetchGymInfo } from "../src/sources.js";
 
+// Mock @line/bot-sdk first
+vi.mock("@line/bot-sdk", () => ({
+  validateSignature: vi.fn(() => true), // Mock signature validation to always pass
+  messagingApi: {
+    MessagingApiClient: vi.fn().mockImplementation(() => ({
+      replyMessage: vi.fn(),
+    })),
+  },
+}));
+
 // Mock the sources module
 vi.mock("../src/sources.js", () => ({
   sources: [{ name: "Test Source", url: "https://test.com", parse: vi.fn() }],
   fetchGymInfo: vi.fn(),
 }));
+
+// Set dummy environment variables for tests
+process.env.LINE_CHANNEL_ACCESS_TOKEN = "dummy_token";
+process.env.LINE_CHANNEL_SECRET = "dummy_secret";
 
 describe("Server Integration", () => {
   let app: express.Application;
