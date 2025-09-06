@@ -1,0 +1,44 @@
+import { GymInfo, Source } from "./types.js";
+
+// Node 18+ 原生有 fetch，無需額外安裝
+const TAIPEI_ENDPOINT =
+  "https://booking-tpsc.sporetrofit.com/Home/loadLocationPeopleNum";
+
+export const sources: Source[] = [
+  {
+    name: "台北運動中心",
+    url: TAIPEI_ENDPOINT,
+    parse: (data: any) =>
+      data.locationPeopleNums?.map((x: any) => ({
+        name: `${x.lidName}運動中心`,
+        gymCurrent: Number(x.gymPeopleNum ?? 0),
+        gymMax: Number(x.gymMaxPeopleNum ?? 0),
+      })) ?? [],
+  },
+  {
+    name: "南港運動中心",
+    url: "https://ngsc.cyc.org.tw/api",
+    parse: (data: any) => [
+      {
+        name: "南港運動中心",
+        gymCurrent: Number(data.gym?.[0] ?? 0),
+        gymMax: Number(data.gym?.[1] ?? 0),
+      },
+    ],
+  },
+];
+
+export async function fetchGymInfo(source: Source): Promise<GymInfo[]> {
+  try {
+    const resp = await fetch(source.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return source.parse(data);
+  } catch {
+    return [];
+  }
+}
