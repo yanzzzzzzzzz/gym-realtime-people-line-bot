@@ -1,5 +1,6 @@
 export type GymInfo = {
   name: string;
+  region: string;
   gymCurrent: number;
   gymMax: number;
 };

@@ -19,6 +19,8 @@ vi.mock("../src/sources.js", () => ({
   sources: [
     { name: "Test Source 1", url: "https://test1.com", parse: vi.fn() },
     { name: "Test Source 2", url: "https://test2.com", parse: vi.fn() },
+    { name: "Test Source 3", url: "https://test3.com", parse: vi.fn() },
+    { name: "Test Source 4", url: "https://test4.com", parse: vi.fn() },
   ],
   fetchGymInfo: vi.fn(),
 }));
@@ -59,20 +61,22 @@ describe("Routes", () => {
   describe("GET /api/people", () => {
     it("should return gym data from all sources", async () => {
       const mockGymData = [
-        { name: "Gym 1", gymCurrent: 10, gymMax: 100 },
-        { name: "Gym 2", gymCurrent: 20, gymMax: 200 },
+        { name: "Gym 1", region: "台北", gymCurrent: 10, gymMax: 100 },
+        { name: "Gym 2", region: "桃園", gymCurrent: 20, gymMax: 200 },
       ];
 
       (fetchGymInfo as any)
         .mockResolvedValueOnce([mockGymData[0]])
-        .mockResolvedValueOnce([mockGymData[1]]);
+        .mockResolvedValueOnce([mockGymData[1]])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       const response = await request(app).get("/api/people");
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty("items");
       expect(response.body.items).toEqual(mockGymData);
-      expect(fetchGymInfo).toHaveBeenCalledTimes(2);
+      expect(fetchGymInfo).toHaveBeenCalledTimes(4);
     });
 
     it("should handle fetch errors gracefully", async () => {
@@ -87,20 +91,66 @@ describe("Routes", () => {
 
     it("should flatten results from multiple sources", async () => {
       const mockData1 = [
-        { name: "Gym A", gymCurrent: 5, gymMax: 50 },
-        { name: "Gym B", gymCurrent: 15, gymMax: 150 },
+        { name: "Gym A", region: "台北", gymCurrent: 5, gymMax: 50 },
+        { name: "Gym B", region: "台北", gymCurrent: 15, gymMax: 150 },
       ];
-      const mockData2 = [{ name: "Gym C", gymCurrent: 25, gymMax: 250 }];
+      const mockData2 = [
+        { name: "Gym C", region: "桃園", gymCurrent: 25, gymMax: 250 },
+      ];
 
       (fetchGymInfo as any)
         .mockResolvedValueOnce(mockData1)
-        .mockResolvedValueOnce(mockData2);
+        .mockResolvedValueOnce(mockData2)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       const response = await request(app).get("/api/people");
 
       expect(response.status).toBe(200);
       expect(response.body.items).toHaveLength(3);
       expect(response.body.items).toEqual([...mockData1, ...mockData2]);
+    });
+
+    it("should filter by region when region query parameter is provided", async () => {
+      const mockGymData = [
+        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
+        { name: "桃園運動中心", region: "桃園", gymCurrent: 20, gymMax: 200 },
+        { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 300 },
+      ];
+
+      (fetchGymInfo as any)
+        .mockResolvedValueOnce([mockGymData[0]])
+        .mockResolvedValueOnce([mockGymData[1]])
+        .mockResolvedValueOnce([mockGymData[2]])
+        .mockResolvedValueOnce([]);
+
+      const response = await request(app).get("/api/people?region=台北");
+
+      expect(response.status).toBe(200);
+      expect(response.body.items).toHaveLength(2);
+      expect(response.body.items).toEqual([
+        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
+        { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 300 },
+      ]);
+    });
+
+    it("should return empty array when no gyms match the region", async () => {
+      const mockGymData = [
+        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
+        { name: "桃園運動中心", region: "桃園", gymCurrent: 20, gymMax: 200 },
+      ];
+
+      (fetchGymInfo as any)
+        .mockResolvedValueOnce([mockGymData[0]])
+        .mockResolvedValueOnce([mockGymData[1]])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const response = await request(app).get("/api/people?region=新竹");
+
+      expect(response.status).toBe(200);
+      expect(response.body.items).toHaveLength(0);
+      expect(response.body.items).toEqual([]);
     });
   });
 });

@@ -6,11 +6,13 @@ describe("Types", () => {
     it("should accept valid gym info object", () => {
       const gymInfo: GymInfo = {
         name: "Test Gym",
+        region: "Test Region",
         gymCurrent: 25,
         gymMax: 100,
       };
 
       expect(gymInfo.name).toBe("Test Gym");
+      expect(gymInfo.region).toBe("Test Region");
       expect(gymInfo.gymCurrent).toBe(25);
       expect(gymInfo.gymMax).toBe(100);
     });
@@ -18,6 +20,7 @@ describe("Types", () => {
     it("should accept zero values", () => {
       const gymInfo: GymInfo = {
         name: "Empty Gym",
+        region: "Test Region",
         gymCurrent: 0,
         gymMax: 0,
       };
@@ -35,6 +38,7 @@ describe("Types", () => {
         parse: (data: any) => [
           {
             name: "Test Gym",
+            region: "Test Region",
             gymCurrent: 10,
             gymMax: 50,
           },

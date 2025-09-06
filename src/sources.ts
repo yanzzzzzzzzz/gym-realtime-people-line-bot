@@ -11,6 +11,7 @@ export const sources: Source[] = [
     parse: (data: any) =>
       data.locationPeopleNums?.map((x: any) => ({
         name: `${x.lidName}運動中心`,
+        region: "台北",
         gymCurrent: Number(x.gymPeopleNum ?? 0),
         gymMax: Number(x.gymMaxPeopleNum ?? 0),
       })) ?? [],
@@ -21,6 +22,31 @@ export const sources: Source[] = [
     parse: (data: any) => [
       {
         name: "南港運動中心",
+        region: "台北",
+        gymCurrent: Number(data.gym?.[0] ?? 0),
+        gymMax: Number(data.gym?.[1] ?? 0),
+      },
+    ],
+  },
+  {
+    name: "桃園八德運動中心",
+    url: "https://bdcsc.cyc.org.tw/api",
+    parse: (data: any) => [
+      {
+        name: "桃園八德運動中心",
+        region: "桃園",
+        gymCurrent: Number(data.gym?.[0] ?? 0),
+        gymMax: Number(data.gym?.[1] ?? 0),
+      },
+    ],
+  },
+  {
+    name: "成德運動中心",
+    url: "https://wd10.xuanen.com.tw/display/discode.aspx?action=z2",
+    parse: (data: any) => [
+      {
+        name: "成德運動中心",
+        region: "台北",
         gymCurrent: Number(data.gym?.[0] ?? 0),
         gymMax: Number(data.gym?.[1] ?? 0),
       },

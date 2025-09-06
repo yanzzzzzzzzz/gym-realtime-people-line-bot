@@ -6,15 +6,19 @@ import { GymInfo } from "../src/types.js";
 global.fetch = vi.fn();
 
 describe("sources", () => {
-  it("should have two sources configured", () => {
-    expect(sources).toHaveLength(2);
+  it("should have four sources configured", () => {
+    expect(sources).toHaveLength(4);
     expect(sources[0].name).toBe("台北運動中心");
     expect(sources[1].name).toBe("南港運動中心");
+    expect(sources[2].name).toBe("桃園八德運動中心");
+    expect(sources[3].name).toBe("成德運動中心");
   });
 
   it("should have correct URLs", () => {
     expect(sources[0].url).toContain("booking-tpsc.sporetrofit.com");
     expect(sources[1].url).toContain("ngsc.cyc.org.tw");
+    expect(sources[2].url).toContain("bdcsc.cyc.org.tw");
+    expect(sources[3].url).toContain("wd10.xuanen.com.tw");
   });
 });
 
@@ -25,6 +29,7 @@ describe("fetchGymInfo", () => {
     parse: (data: any) => [
       {
         name: "Test Gym Center",
+        region: "Test Region",
         gymCurrent: 10,
         gymMax: 100,
       },
@@ -53,6 +58,7 @@ describe("fetchGymInfo", () => {
     expect(result).toEqual([
       {
         name: "Test Gym Center",
+        region: "Test Region",
         gymCurrent: 10,
         gymMax: 100,
       },
@@ -102,11 +108,13 @@ describe("Taipei source parsing", () => {
     expect(result).toEqual([
       {
         name: "松山運動中心",
+        region: "台北",
         gymCurrent: 25,
         gymMax: 200,
       },
       {
         name: "信義運動中心",
+        region: "台北",
         gymCurrent: 0,
         gymMax: 150,
       },
@@ -133,6 +141,7 @@ describe("Nangang source parsing", () => {
     expect(result).toEqual([
       {
         name: "南港運動中心",
+        region: "台北",
         gymCurrent: 30,
         gymMax: 120,
       },
@@ -147,6 +156,75 @@ describe("Nangang source parsing", () => {
     expect(result).toEqual([
       {
         name: "南港運動中心",
+        region: "台北",
+        gymCurrent: 0,
+        gymMax: 0,
+      },
+    ]);
+  });
+});
+
+describe("Taoyuan Bade source parsing", () => {
+  it("should parse Taoyuan Bade gym data correctly", () => {
+    const mockData = {
+      gym: ["25", "80", "0"],
+    };
+
+    const result = sources[2].parse(mockData);
+
+    expect(result).toEqual([
+      {
+        name: "桃園八德運動中心",
+        region: "桃園",
+        gymCurrent: 25,
+        gymMax: 80,
+      },
+    ]);
+  });
+
+  it("should handle missing gym data", () => {
+    const mockData = { gym: null };
+
+    const result = sources[2].parse(mockData);
+
+    expect(result).toEqual([
+      {
+        name: "桃園八德運動中心",
+        region: "桃園",
+        gymCurrent: 0,
+        gymMax: 0,
+      },
+    ]);
+  });
+});
+
+describe("Chengde source parsing", () => {
+  it("should parse Chengde gym data correctly", () => {
+    const mockData = {
+      gym: ["4", "80", "0"],
+    };
+
+    const result = sources[3].parse(mockData);
+
+    expect(result).toEqual([
+      {
+        name: "成德運動中心",
+        region: "台北",
+        gymCurrent: 4,
+        gymMax: 80,
+      },
+    ]);
+  });
+
+  it("should handle missing gym data", () => {
+    const mockData = { gym: null };
+
+    const result = sources[3].parse(mockData);
+
+    expect(result).toEqual([
+      {
+        name: "成德運動中心",
+        region: "台北",
         gymCurrent: 0,
         gymMax: 0,
       },
