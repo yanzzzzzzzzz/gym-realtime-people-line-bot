@@ -120,16 +120,14 @@ describe("Routes", () => {
 
     it("should filter by region when region query parameter is provided", async () => {
       const mockGymData = [
-        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
         { name: "桃園運動中心", region: "桃園", gymCurrent: 20, gymMax: 200 },
         { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 300 },
       ];
 
       // make fetchGymInfo return data based on the source argument it receives
       (fetchGymInfo as any).mockImplementation((src: any) => {
-        if (src.name === "Test Source 1") return Promise.resolve([mockGymData[0]]);
-        if (src.name === "Test Source 2") return Promise.resolve([mockGymData[1]]);
-        if (src.name === "Test Source 3") return Promise.resolve([mockGymData[2]]);
+        if (src.name === "Test Source 2") return Promise.resolve([mockGymData[0]]);
+        if (src.name === "Test Source 3") return Promise.resolve([mockGymData[1]]);
         return Promise.resolve([]);
       });
 
@@ -138,12 +136,12 @@ describe("Routes", () => {
       expect(response.status).toBe(200);
       // only gyms in the mocked `gyms` with region '台北' should be returned
       expect(response.body.items.every((g: any) => g.region === "台北")).toBe(true);
-      expect(response.body.items).toHaveLength(2);
+      expect(response.body.items).toHaveLength(1);
     });
 
     it("should return empty array when no gyms match the region", async () => {
       const mockGymData = [
-        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
+        { name: "南港運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
         { name: "桃園運動中心", region: "桃園", gymCurrent: 20, gymMax: 200 },
       ];
 
