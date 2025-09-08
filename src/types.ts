@@ -8,5 +8,6 @@ export type GymInfo = {
 export type Source = {
   name: string;
   url: string;
+  method: "GET" | "POST";
   parse: (data: any) => GymInfo[];
 };
