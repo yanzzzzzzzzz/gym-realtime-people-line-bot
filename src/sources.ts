@@ -31,19 +31,6 @@ export const sources: Source[] = [
     ],
   },
   {
-    name: "桃園八德運動中心",
-    url: "https://bdcsc.cyc.org.tw/api",
-    method: "POST",
-    parse: (data: any) => [
-      {
-        name: "桃園八德運動中心",
-        region: "桃園",
-        gymCurrent: Number(data.gym?.[0] ?? 0),
-        gymMax: Number(data.gym?.[1] ?? 0),
-      },
-    ],
-  },
-  {
     name: "成德運動中心",
     url: "https://wd10.xuanen.com.tw/display/discode.aspx?action=z2",
     method: "GET",
@@ -58,6 +45,19 @@ export const sources: Source[] = [
       }];
     },
   },
+  {
+    name: "桃園八德運動中心",
+    url: "https://bdcsc.cyc.org.tw/api",
+    method: "POST",
+    parse: (data: any) => [
+      {
+        name: "桃園八德運動中心",
+        region: "桃園",
+        gymCurrent: Number(data.gym?.[0] ?? 0),
+        gymMax: Number(data.gym?.[1] ?? 0),
+      },
+    ],
+  }
 ];
 
 export async function fetchGymInfo(source: Source): Promise<GymInfo[]> {
