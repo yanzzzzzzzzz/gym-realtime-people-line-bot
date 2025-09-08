@@ -1,6 +1,8 @@
 import express from "express";
 import { messagingApi, validateSignature } from "@line/bot-sdk";
-import { sources, fetchGymInfo } from "./sources.js";
+import { sources, fetchGymInfo, gyms } from "./sources.js";
+import { GymInfo } from "./types.js";
+import { taiwanRegions } from "./constants.js";
 
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || "",
@@ -17,6 +19,35 @@ function getClient() {
   }
   return client;
 }
+export async function fetchGymInfoByRegion(region: string): Promise<GymInfo[]> {
+  const regionGyms = gyms.filter((g: typeof gyms[0]) => g.region === region);
+  const results = await Promise.all(
+    regionGyms.map((gym: typeof gyms[0]) =>
+      fetchGymInfo({
+        name: gym.name,
+        url: gym.api,
+        method: gym.method,
+        parse: gym.parse,
+      })
+    )
+  );
+  return results.flat();
+}
+
+export async function fetchGymInfoByKeyword(keyword: string): Promise<GymInfo[]> {
+  const matchedGyms = gyms.filter((g: typeof gyms[0]) => g.name.includes(keyword));
+  const results = await Promise.all(
+    matchedGyms.map((gym: typeof gyms[0]) =>
+      fetchGymInfo({
+        name: gym.name,
+        url: gym.api,
+        method: gym.method,
+        parse: gym.parse,
+      })
+    )
+  );
+  return results.flat();
+}
 
 export function setupRoutes(app: express.Application) {
   app.get("/health", (_req, res) => {
@@ -25,15 +56,17 @@ export function setupRoutes(app: express.Application) {
 
   app.get("/api/people", async (req, res) => {
     try {
-      const results = await Promise.all(sources.map(fetchGymInfo));
-      let items = results.flat();
-
-      // 支持地区过滤
+      let items: GymInfo[] = [];
       const region = req.query.region as string;
+      const keyword = req.query.keyword as string;
       if (region) {
-        items = items.filter((item) => item.region === region);
+        items = await fetchGymInfoByRegion(region);
+      } else if (keyword) {
+        items = await fetchGymInfoByKeyword(keyword);
+      } else {
+        const results = await Promise.all(sources.map(fetchGymInfo));
+        items = results.flat();
       }
-
       res.json({ items });
     } catch (err: any) {
       res
@@ -64,6 +97,7 @@ export function setupRoutes(app: express.Application) {
   }
 }
 
+
 async function handleEvent(event: any) {
   const currentClient = getClient();
   if (!currentClient) return;
@@ -72,43 +106,15 @@ async function handleEvent(event: any) {
     return;
   }
 
-  const userMessage = event.message.text;
+  const userMessage = event.message.text.trim();
+  let gyms: GymInfo[] = [];
   let replyText = "";
 
-  // 台湾地区列表
-  const taiwanRegions = [
-    "台北",
-    "新北",
-    "桃園",
-    "台中",
-    "台南",
-    "高雄",
-    "基隆",
-    "新竹",
-    "苗栗",
-    "彰化",
-    "南投",
-    "雲林",
-    "嘉義",
-    "屏東",
-    "宜蘭",
-    "花蓮",
-    "台東",
-    "澎湖",
-    "金門",
-    "連江",
-  ];
-
-  // 查詢場館數據
-  const results = await Promise.all(sources.map(fetchGymInfo));
-  const gyms = results.flat();
-
-  // 首先检查是否是地区名称
   if (taiwanRegions.includes(userMessage)) {
-    const regionGyms = gyms.filter((gym) => gym.region === userMessage);
-    if (regionGyms.length > 0) {
+    gyms = await fetchGymInfoByRegion(userMessage);
+    if (gyms.length > 0) {
       replyText = `${userMessage}地區的運動中心：\n`;
-      regionGyms.forEach((gym) => {
+      gyms.forEach((gym) => {
         replyText += `${gym.name}: ${gym.gymCurrent}/${gym.gymMax} 人\n`;
       });
       replyText = replyText.trim();
@@ -116,10 +122,11 @@ async function handleEvent(event: any) {
       replyText = `${userMessage}地區目前沒有支援的運動中心。`;
     }
   } else {
-    // 如果不是地区，尝试按名称匹配（保持原有逻辑）
-    const matchedGym = gyms.find((gym) => gym.name.includes(userMessage));
-    if (matchedGym) {
-      replyText = `${matchedGym.name} 當前人數 ${matchedGym.gymCurrent}/${matchedGym.gymMax}`;
+    gyms = await fetchGymInfoByKeyword(userMessage);
+    if (gyms.length > 0) {
+      replyText = gyms
+        .map((gym) => `${gym.name} 當前人數 ${gym.gymCurrent}/${gym.gymMax}`)
+        .join("\n");
     } else {
       replyText =
         "找不到相關場館，請輸入地區（如「台北」、「桃園」）或關鍵字如「南港」。";

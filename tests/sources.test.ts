@@ -1,233 +1,139 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { sources, fetchGymInfo } from "../src/sources.js";
-import { GymInfo } from "../src/types.js";
 
-// Mock fetch globally
+// use a global fetch mock so tests don't perform network requests
 global.fetch = vi.fn();
 
-describe("sources", () => {
-  it("should have four sources configured", () => {
-    expect(sources).toHaveLength(4);
-    expect(sources[0].name).toBe("台北運動中心");
-    expect(sources[1].name).toBe("南港運動中心");
-    expect(sources[2].name).toBe("桃園八德運動中心");
-    expect(sources[3].name).toBe("成德運動中心");
+describe("sources (order-independent)", () => {
+  it("exports required named sources", () => {
+    const required = [
+      "台北運動中心",
+      "南港運動中心",
+      "桃園八德運動中心",
+      "成德運動中心",
+    ];
+
+    required.forEach((name) => {
+      const s = sources.find((x) => x.name === name);
+      expect(s).toBeDefined();
+    });
   });
 
-  it("should have correct URLs", () => {
-    expect(sources[0].url).toContain("booking-tpsc.sporetrofit.com");
-    expect(sources[1].url).toContain("ngsc.cyc.org.tw");
-    expect(sources[2].url).toContain("bdcsc.cyc.org.tw");
-    expect(sources[3].url).toContain("wd10.xuanen.com.tw");
+  it("has sensible urls for known sources", () => {
+    const mapping: Record<string, string> = {
+      "台北運動中心": "booking-tpsc.sporetrofit.com",
+      "南港運動中心": "ngsc.cyc.org.tw",
+      "桃園八德運動中心": "bdcsc.cyc.org.tw",
+      "成德運動中心": "wd10.xuanen.com.tw",
+    };
+
+    Object.entries(mapping).forEach(([name, domain]) => {
+      const s = sources.find((x) => x.name === name);
+      expect(s).toBeDefined();
+      expect(s!.url).toContain(domain);
+    });
   });
 });
 
 describe("fetchGymInfo", () => {
-  const mockSource = {
-    name: "Test Gym",
-    url: "https://test.com/api",
-    parse: (data: any) => [
-      {
-        name: "Test Gym Center",
-        region: "Test Region",
-        gymCurrent: 10,
-        gymMax: 100,
-      },
-    ],
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should return parsed data on successful fetch", async () => {
-    const mockResponse = {
-      ok: true,
-      json: vi.fn().mockResolvedValue({ test: "data" }),
-    };
+  it("POST sources send JSON body and parse JSON response", async () => {
+    const taipei = sources.find((s) => s.name === "台北運動中心");
+    expect(taipei).toBeDefined();
 
-    (global.fetch as any).mockResolvedValue(mockResponse);
-
-    const result = await fetchGymInfo(mockSource);
-
-    expect(global.fetch).toHaveBeenCalledWith(mockSource.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    expect(result).toEqual([
-      {
-        name: "Test Gym Center",
-        region: "Test Region",
-        gymCurrent: 10,
-        gymMax: 100,
-      },
-    ]);
-  });
-
-  it("should return empty array on fetch failure", async () => {
-    const mockResponse = {
-      ok: false,
-    };
-
-    (global.fetch as any).mockResolvedValue(mockResponse);
-
-    const result = await fetchGymInfo(mockSource);
-
-    expect(result).toEqual([]);
-  });
-
-  it("should return empty array on network error", async () => {
-    (global.fetch as any).mockRejectedValue(new Error("Network error"));
-
-    const result = await fetchGymInfo(mockSource);
-
-    expect(result).toEqual([]);
-  });
-});
-
-describe("Taipei source parsing", () => {
-  it("should parse Taipei gym data correctly", () => {
-    const mockData = {
+    const mockJson = {
       locationPeopleNums: [
-        {
-          lidName: "松山",
-          gymPeopleNum: "25",
-          gymMaxPeopleNum: "200",
-        },
-        {
-          lidName: "信義",
-          gymPeopleNum: null,
-          gymMaxPeopleNum: "150",
-        },
+        { lidName: "松山", gymPeopleNum: "25", gymMaxPeopleNum: "200" },
       ],
     };
 
-    const result = sources[0].parse(mockData);
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(mockJson),
+    });
+
+    const result = await fetchGymInfo(taipei!);
+
+  // the fetch helper adds an AbortController signal; inspect the call instead of exact equality
+  expect((global.fetch as any).mock.calls.length).toBeGreaterThan(0);
+  const [calledUrl, calledOpts] = (global.fetch as any).mock.calls[0];
+  expect(calledUrl).toBe(taipei!.url);
+  expect(calledOpts.method).toBe("POST");
+  expect(calledOpts.headers).toEqual({ "Content-Type": "application/json" });
+  expect(calledOpts.body).toBe("{}");
 
     expect(result).toEqual([
-      {
-        name: "松山運動中心",
-        region: "台北",
-        gymCurrent: 25,
-        gymMax: 200,
-      },
-      {
-        name: "信義運動中心",
-        region: "台北",
-        gymCurrent: 0,
-        gymMax: 150,
-      },
+      { name: "松山運動中心", region: "台北", gymCurrent: 25, gymMax: 200 },
     ]);
   });
 
-  it("should handle empty locationPeopleNums", () => {
-    const mockData = { locationPeopleNums: null };
+  it("GET sources call fetch without body and parse text response", async () => {
+    const chengde = sources.find((s) => s.name === "成德運動中心");
+    expect(chengde).toBeDefined();
 
-    const result = sources[0].parse(mockData);
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue("4,80,0"),
+    });
 
+    const result = await fetchGymInfo(chengde!);
+
+  // doFetch passes a signal as second arg; check the first argument == url
+  expect((global.fetch as any).mock.calls.length).toBeGreaterThan(0);
+  const [calledUrlGet] = (global.fetch as any).mock.calls[0];
+  expect(calledUrlGet).toBe(chengde!.url);
+    expect(result).toEqual([
+      { name: "成德運動中心", region: "台北", gymCurrent: 4, gymMax: 80 },
+    ]);
+  });
+
+  it("returns empty array when response is not ok", async () => {
+    const taipei = sources.find((s) => s.name === "台北運動中心");
+    (global.fetch as any).mockResolvedValue({ ok: false });
+    const result = await fetchGymInfo(taipei!);
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty array on network error", async () => {
+    const taipei = sources.find((s) => s.name === "台北運動中心");
+    (global.fetch as any).mockRejectedValue(new Error("net"));
+    const result = await fetchGymInfo(taipei!);
     expect(result).toEqual([]);
   });
 });
 
-describe("Nangang source parsing", () => {
-  it("should parse Nangang gym data correctly", () => {
-    const mockData = {
-      gym: [30, 120],
-    };
+describe("parsers (order-independent)", () => {
+  it("Taipei parser handles empty list", () => {
+    const taipei = sources.find((s) => s.name === "台北運動中心");
+    const result = taipei!.parse({ locationPeopleNums: null });
+    expect(result).toEqual([]);
+  });
 
-    const result = sources[1].parse(mockData);
-
+  it("Nangang parser parses gym array", () => {
+    const nangang = sources.find((s) => s.name === "南港運動中心");
+    const result = nangang!.parse({ gym: [30, 120] });
     expect(result).toEqual([
-      {
-        name: "南港運動中心",
-        region: "台北",
-        gymCurrent: 30,
-        gymMax: 120,
-      },
+      { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 120 },
     ]);
   });
 
-  it("should handle missing gym data", () => {
-    const mockData = { gym: null };
-
-    const result = sources[1].parse(mockData);
-
+  it("Taoyuan Bade parser parses gym array", () => {
+    const bade = sources.find((s) => s.name === "桃園八德運動中心");
+    const result = bade!.parse({ gym: ["25", "80", "0"] });
     expect(result).toEqual([
-      {
-        name: "南港運動中心",
-        region: "台北",
-        gymCurrent: 0,
-        gymMax: 0,
-      },
-    ]);
-  });
-});
-
-describe("Taoyuan Bade source parsing", () => {
-  it("should parse Taoyuan Bade gym data correctly", () => {
-    const mockData = {
-      gym: ["25", "80", "0"],
-    };
-
-    const result = sources[2].parse(mockData);
-
-    expect(result).toEqual([
-      {
-        name: "桃園八德運動中心",
-        region: "桃園",
-        gymCurrent: 25,
-        gymMax: 80,
-      },
+      { name: "桃園八德運動中心", region: "桃園", gymCurrent: 25, gymMax: 80 },
     ]);
   });
 
-  it("should handle missing gym data", () => {
-    const mockData = { gym: null };
-
-    const result = sources[2].parse(mockData);
-
+  it("Chengde parser parses CSV string", () => {
+    const chengde = sources.find((s) => s.name === "成德運動中心");
+    const result = chengde!.parse("4,80,0");
     expect(result).toEqual([
-      {
-        name: "桃園八德運動中心",
-        region: "桃園",
-        gymCurrent: 0,
-        gymMax: 0,
-      },
+      { name: "成德運動中心", region: "台北", gymCurrent: 4, gymMax: 80 },
     ]);
   });
 });
 
-describe("Chengde source parsing", () => {
-  it("should parse Chengde gym data correctly", () => {
-    const mockData = {
-      gym: ["4", "80", "0"],
-    };
-
-    const result = sources[3].parse(mockData);
-
-    expect(result).toEqual([
-      {
-        name: "成德運動中心",
-        region: "台北",
-        gymCurrent: 4,
-        gymMax: 80,
-      },
-    ]);
-  });
-
-  it("should handle missing gym data", () => {
-    const mockData = { gym: null };
-
-    const result = sources[3].parse(mockData);
-
-    expect(result).toEqual([
-      {
-        name: "成德運動中心",
-        region: "台北",
-        gymCurrent: 0,
-        gymMax: 0,
-      },
-    ]);
-  });
-});

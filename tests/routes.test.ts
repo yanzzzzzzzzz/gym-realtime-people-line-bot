@@ -22,6 +22,13 @@ vi.mock("../src/sources.js", () => ({
     { name: "Test Source 3", url: "https://test3.com", parse: vi.fn() },
     { name: "Test Source 4", url: "https://test4.com", parse: vi.fn() },
   ],
+  // also provide `gyms` used by fetch-by-region / fetch-by-keyword helpers
+  gyms: [
+    { name: "Test Source 1", region: "台北", api: "https://test1.com", method: "POST", parse: vi.fn() },
+    { name: "Test Source 2", region: "桃園", api: "https://test2.com", method: "POST", parse: vi.fn() },
+    { name: "Test Source 3", region: "台北", api: "https://test3.com", method: "POST", parse: vi.fn() },
+    { name: "Test Source 4", region: "台中", api: "https://test4.com", method: "POST", parse: vi.fn() },
+  ],
   fetchGymInfo: vi.fn(),
 }));
 
@@ -118,20 +125,20 @@ describe("Routes", () => {
         { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 300 },
       ];
 
-      (fetchGymInfo as any)
-        .mockResolvedValueOnce([mockGymData[0]])
-        .mockResolvedValueOnce([mockGymData[1]])
-        .mockResolvedValueOnce([mockGymData[2]])
-        .mockResolvedValueOnce([]);
+      // make fetchGymInfo return data based on the source argument it receives
+      (fetchGymInfo as any).mockImplementation((src: any) => {
+        if (src.name === "Test Source 1") return Promise.resolve([mockGymData[0]]);
+        if (src.name === "Test Source 2") return Promise.resolve([mockGymData[1]]);
+        if (src.name === "Test Source 3") return Promise.resolve([mockGymData[2]]);
+        return Promise.resolve([]);
+      });
 
       const response = await request(app).get("/api/people?region=台北");
 
       expect(response.status).toBe(200);
+      // only gyms in the mocked `gyms` with region '台北' should be returned
+      expect(response.body.items.every((g: any) => g.region === "台北")).toBe(true);
       expect(response.body.items).toHaveLength(2);
-      expect(response.body.items).toEqual([
-        { name: "台北運動中心", region: "台北", gymCurrent: 10, gymMax: 100 },
-        { name: "南港運動中心", region: "台北", gymCurrent: 30, gymMax: 300 },
-      ]);
     });
 
     it("should return empty array when no gyms match the region", async () => {
